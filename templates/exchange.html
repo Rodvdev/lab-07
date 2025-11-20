@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Exchange Rates - Flask Lambda App{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0">
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-900">Exchange Rates</h1>
+        <p class="mt-2 text-sm text-gray-600">Real-time currency exchange rates from ExchangeRates API</p>
+    </div>
+
+    {% if error %}
+    <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded mb-6">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                </svg>
+            </div>
+            <div class="ml-3">
+                <p class="text-sm text-red-700">{{ error }}</p>
+            </div>
+        </div>
+    </div>
+    {% elif rates %}
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <div class="px-6 py-4 bg-indigo-600">
+            <h2 class="text-xl font-semibold text-white">Current Exchange Rates (Base: USD)</h2>
+            {% if rates.date %}
+            <p class="text-sm text-indigo-100 mt-1">Last updated: {{ rates.date }}</p>
+            {% endif %}
+        </div>
+        
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- USD Card -->
+                <div class="bg-blue-50 rounded-lg p-6 border-2 border-blue-200">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-2xl font-bold text-blue-900">USD</span>
+                        <svg class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <p class="text-4xl font-bold text-blue-900">{{ "%.4f"|format(rates.USD) }}</p>
+                    <p class="text-sm text-blue-600 mt-2">US Dollar</p>
+                </div>
+
+                <!-- EUR Card -->
+                <div class="bg-green-50 rounded-lg p-6 border-2 border-green-200">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-2xl font-bold text-green-900">EUR</span>
+                        <svg class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <p class="text-4xl font-bold text-green-900">{{ "%.4f"|format(rates.EUR) }}</p>
+                    <p class="text-sm text-green-600 mt-2">Euro</p>
+                </div>
+
+                <!-- PEN Card -->
+                <div class="bg-red-50 rounded-lg p-6 border-2 border-red-200">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-2xl font-bold text-red-900">PEN</span>
+                        <svg class="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <p class="text-4xl font-bold text-red-900">{{ "%.4f"|format(rates.PEN) }}</p>
+                    <p class="text-sm text-red-600 mt-2">Peruvian Sol</p>
+                </div>
+            </div>
+
+            <div class="mt-6 pt-6 border-t border-gray-200">
+                <p class="text-sm text-gray-500 text-center">
+                    Rates are fetched from <a href="https://apilayer.com/marketplace/exchangerates_data-api" target="_blank" class="text-indigo-600 hover:text-indigo-800">ExchangeRates API</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-6">
+        <a href="/" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+            <svg class="mr-2 -ml-1 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Home
+        </a>
+    </div>
+    {% else %}
+    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+            </div>
+            <div class="ml-3">
+                <p class="text-sm text-yellow-700">No exchange rate data available at this time.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
