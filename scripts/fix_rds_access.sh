@@ -8,13 +8,29 @@ REGION="us-east-2"
 
 echo "🔧 Configurando acceso a RDS..."
 
-# 1. Habilitar acceso público
-echo "📡 Habilitando acceso público..."
-aws rds modify-db-cluster \
-    --db-cluster-identifier $CLUSTER_ID \
+# 1. Habilitar acceso público en todas las instancias del cluster
+echo "📡 Habilitando acceso público en instancias de Aurora..."
+INSTANCES=$(aws rds describe-db-instances \
     --region $REGION \
-    --publicly-accessible \
-    --apply-immediately
+    --query "DBInstances[?DBClusterIdentifier=='$CLUSTER_ID'].DBInstanceIdentifier" \
+    --output text)
+
+for INSTANCE in $INSTANCES; do
+    echo "  Modificando instancia: $INSTANCE"
+    aws rds modify-db-instance \
+        --db-instance-identifier $INSTANCE \
+        --publicly-accessible \
+        --apply-immediately \
+        --region $REGION \
+        --no-cli-pager > /dev/null 2>&1
+    
+    if [ $? -eq 0 ]; then
+        echo "  ✅ Modificación iniciada para $INSTANCE"
+    else
+        echo "  ⚠️  Error o ya configurado para $INSTANCE"
+    fi
+done
+echo "  ⏳ Las modificaciones pueden tardar 2-5 minutos en aplicarse"
 
 # 2. Obtener tu IP pública
 MY_IP=$(curl -s ifconfig.me)

@@ -22,7 +22,8 @@ DB_CONFIG = {
     'database': os.getenv('DB_NAME'),
     'user': os.getenv('DB_USER'),
     'password': os.getenv('DB_PASS'),
-    'port': 5432
+    'port': 5432,
+    'connect_timeout': 10  # Add connection timeout
 }
 
 # Currency Data API configuration
@@ -32,17 +33,37 @@ EXCHANGE_API_KEY = os.getenv('API_KEY_EXCHANGE')
 # Database connection pool (minimal for Lambda)
 db_pool = None
 
+def validate_db_config():
+    """Validate that database configuration is present."""
+    required_keys = ['host', 'database', 'user', 'password']
+    missing = [key for key in required_keys if not DB_CONFIG.get(key)]
+    if missing:
+        raise ValueError(f"Missing database configuration: {', '.join(missing)}. "
+                        f"Please set the following environment variables: "
+                        f"{', '.join(['DB_' + k.upper() for k in missing])}")
+
 def get_db_connection():
     """Get database connection from pool or create new connection."""
     global db_pool
+    
+    # Validate configuration before attempting connection
+    validate_db_config()
     
     try:
         if db_pool is None:
             # For Lambda, use a simple connection pool (min 1, max 1 to avoid cold start issues)
             db_pool = psycopg2.pool.SimpleConnectionPool(1, 1, **DB_CONFIG)
-            logger.info("Database connection pool created")
+            logger.info(f"Database connection pool created for {DB_CONFIG['host']}")
         
         return db_pool.getconn()
+    except psycopg2.OperationalError as e:
+        logger.error(f"Database connection error: {str(e)}")
+        logger.error(f"Attempting to connect to: {DB_CONFIG['host']}:{DB_CONFIG['port']}")
+        logger.error("Common issues:")
+        logger.error("  - RDS is in a private VPC and not accessible from local machine")
+        logger.error("  - Security group doesn't allow connections from your IP")
+        logger.error("  - Database endpoint/credentials are incorrect")
+        raise
     except Exception as e:
         logger.error(f"Error connecting to database: {str(e)}")
         raise
@@ -52,12 +73,12 @@ def return_db_connection(conn):
     if db_pool and conn:
         db_pool.putconn(conn)
 
-@app.route('/')
+@app.route('/production/')
 def index():
     """Home page with navigation links."""
     return render_template('index.html')
 
-@app.route('/exchange')
+@app.route('/production/exchange')
 def exchange():
     """Display exchange rates from Currency Data API."""
     rates = None
@@ -143,7 +164,7 @@ def exchange():
     
     return render_template('exchange.html', rates=rates, error=error, base_currency=base_currency)
 
-@app.route('/vehicles')
+@app.route('/production/vehicles')
 def vehicles():
     """Display vehicle catalog from Aurora PostgreSQL."""
     vehicles_list = []
@@ -176,9 +197,16 @@ def vehicles():
         
         cursor.close()
         
+    except psycopg2.OperationalError as e:
+        logger.error(f"Database connection error in vehicles route: {str(e)}")
+        error = "Unable to connect to the database. This may be because the database is in a private VPC. Please check your connection settings or deploy to AWS Lambda."
     except psycopg2.Error as e:
         logger.error(f"Database error: {str(e)}")
         error = f"Database error: {str(e)}"
+    except ValueError as e:
+        # Missing configuration
+        logger.error(f"Configuration error: {str(e)}")
+        error = f"Configuration error: {str(e)}"
     except Exception as e:
         logger.error(f"Unexpected error in vehicles route: {str(e)}")
         error = f"An unexpected error occurred: {str(e)}"
@@ -188,7 +216,7 @@ def vehicles():
     
     return render_template('vehicles.html', vehicles=vehicles_list, error=error)
 
-@app.route('/api/conversions', methods=['POST'])
+@app.route('/production/api/conversions', methods=['POST'])
 def save_conversion():
     """Save a conversion to the database."""
     try:
@@ -223,12 +251,22 @@ def save_conversion():
                 'id': result[0],
                 'created_at': result[1].isoformat() if result[1] else None
             })
+        except psycopg2.OperationalError as e:
+            logger.error(f"Database connection error saving conversion: {str(e)}")
+            if conn:
+                conn.rollback()
+            # Return success but indicate database unavailable
+            return jsonify({'success': False, 'error': 'Database connection unavailable', 'use_localStorage': True}), 503
         except psycopg2.Error as e:
             logger.error(f"Database error saving conversion: {str(e)}")
             if conn:
                 conn.rollback()
             # Return success but indicate database unavailable
             return jsonify({'success': False, 'error': 'Database unavailable', 'use_localStorage': True}), 503
+        except ValueError as e:
+            # Missing configuration
+            logger.error(f"Configuration error saving conversion: {str(e)}")
+            return jsonify({'success': False, 'error': str(e), 'use_localStorage': True}), 500
         except Exception as e:
             logger.error(f"Unexpected error saving conversion: {str(e)}")
             if conn:
@@ -241,7 +279,7 @@ def save_conversion():
         logger.error(f"Error in save_conversion: {str(e)}")
         return jsonify({'success': False, 'error': str(e), 'use_localStorage': True}), 500
 
-@app.route('/api/conversions', methods=['GET'])
+@app.route('/production/api/conversions', methods=['GET'])
 def get_conversions():
     """Get conversion history from the database."""
     limit = request.args.get('limit', 50, type=int)
@@ -277,9 +315,16 @@ def get_conversions():
         ]
         
         return jsonify({'success': True, 'conversions': conversions})
+    except psycopg2.OperationalError as e:
+        logger.error(f"Database connection error getting conversions: {str(e)}")
+        return jsonify({'success': False, 'error': 'Database connection unavailable', 'use_localStorage': True}), 503
     except psycopg2.Error as e:
         logger.error(f"Database error getting conversions: {str(e)}")
         return jsonify({'success': False, 'error': 'Database unavailable', 'use_localStorage': True}), 503
+    except ValueError as e:
+        # Missing configuration
+        logger.error(f"Configuration error getting conversions: {str(e)}")
+        return jsonify({'success': False, 'error': str(e), 'use_localStorage': True}), 500
     except Exception as e:
         logger.error(f"Unexpected error getting conversions: {str(e)}")
         return jsonify({'success': False, 'error': 'Unexpected error', 'use_localStorage': True}), 500

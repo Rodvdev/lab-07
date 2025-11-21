@@ -1,11 +1,11 @@
 {
     "production": {
         "app_function": "app.app",
-        "aws_region": "us-east-1",
+        "aws_region": "us-east-2",
         "profile_name": null,
         "project_name": "flask-lambda-app",
         "runtime": "python3.9",
-        "s3_bucket": "zappa-deployments-rodrigo-1763683876",
+        "s3_bucket": "zappa-deployments-rodrigo-us-east-2-1763684470",
         "memory_size": 512,
         "timeout_seconds": 30,
         "api_gateway_stage": "production",
@@ -25,8 +25,8 @@
         "environment_variables": {},
         "keep_warm": false,
         "vpc_config": {
-            "SubnetIds": [],
-            "SecurityGroupIds": []
+            "SubnetIds": ["subnet-0110405aee90016b7", "subnet-07f0a23dfb5e3f382"],
+            "SecurityGroupIds": ["sg-024c779fb8b2cbfcf"]
         },
         "log_level": "INFO",
         "lambda_description": "Flask Lambda Application - Vehicle Exchange App"
