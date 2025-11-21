@@ -218,6 +218,240 @@ def vehicles():
     
     return render_template('vehicles.html', vehicles=vehicles_list, error=error)
 
+# Vehicle CRUD API Routes
+
+@app.route('/production/api/vehicles', methods=['POST'])
+def create_vehicle():
+    """Create a new vehicle."""
+    try:
+        data = request.get_json()
+        brand = data.get('brand', '').strip()
+        model = data.get('model', '').strip()
+        year = data.get('year')
+        price = data.get('price')
+        availability = data.get('availability', False)
+        
+        # Validate input
+        if not brand or not model:
+            return jsonify({'success': False, 'error': 'Brand and model are required'}), 400
+        
+        if not year or not isinstance(year, int) or year < 1900 or year > 2100:
+            return jsonify({'success': False, 'error': 'Valid year is required'}), 400
+        
+        if price is None or price < 0:
+            return jsonify({'success': False, 'error': 'Valid price is required'}), 400
+        
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            query = """
+                INSERT INTO vehicles (brand, model, year, price, availability)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING id, brand, model, year, price, availability
+            """
+            cursor.execute(query, (brand, model, year, price, availability))
+            result = cursor.fetchone()
+            conn.commit()
+            
+            vehicle = {
+                'id': result[0],
+                'brand': result[1],
+                'model': result[2],
+                'year': result[3],
+                'price': float(result[4]),
+                'price_formatted': f"{float(result[4]):,.2f}",
+                'availability': bool(result[5])
+            }
+            
+            cursor.close()
+            return jsonify({'success': True, 'vehicle': vehicle}), 201
+            
+        except psycopg2.IntegrityError as e:
+            logger.error(f"Database integrity error creating vehicle: {str(e)}")
+            if conn:
+                conn.rollback()
+            return jsonify({'success': False, 'error': 'Vehicle already exists'}), 400
+        except psycopg2.Error as e:
+            logger.error(f"Database error creating vehicle: {str(e)}")
+            if conn:
+                conn.rollback()
+            return jsonify({'success': False, 'error': f'Database error: {str(e)}'}), 500
+        except ValueError as e:
+            logger.error(f"Configuration error creating vehicle: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+        except Exception as e:
+            logger.error(f"Unexpected error creating vehicle: {str(e)}")
+            if conn:
+                conn.rollback()
+            return jsonify({'success': False, 'error': 'Unexpected error'}), 500
+        finally:
+            if conn:
+                return_db_connection(conn)
+    except Exception as e:
+        logger.error(f"Error in create_vehicle: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/production/api/vehicles/<int:vehicle_id>', methods=['GET'])
+def get_vehicle(vehicle_id):
+    """Get a single vehicle by ID."""
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        query = """
+            SELECT id, brand, model, year, price, availability
+            FROM vehicles
+            WHERE id = %s
+        """
+        cursor.execute(query, (vehicle_id,))
+        row = cursor.fetchone()
+        cursor.close()
+        
+        if not row:
+            return jsonify({'success': False, 'error': 'Vehicle not found'}), 404
+        
+        vehicle = {
+            'id': row[0],
+            'brand': row[1],
+            'model': row[2],
+            'year': row[3],
+            'price': float(row[4]),
+            'price_formatted': f"{float(row[4]):,.2f}",
+            'availability': bool(row[5])
+        }
+        
+        return jsonify({'success': True, 'vehicle': vehicle})
+        
+    except psycopg2.Error as e:
+        logger.error(f"Database error getting vehicle: {str(e)}")
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+    except ValueError as e:
+        logger.error(f"Configuration error getting vehicle: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    except Exception as e:
+        logger.error(f"Unexpected error getting vehicle: {str(e)}")
+        return jsonify({'success': False, 'error': 'Unexpected error'}), 500
+    finally:
+        if conn:
+            return_db_connection(conn)
+
+@app.route('/production/api/vehicles/<int:vehicle_id>', methods=['PUT'])
+def update_vehicle(vehicle_id):
+    """Update an existing vehicle."""
+    try:
+        data = request.get_json()
+        brand = data.get('brand', '').strip()
+        model = data.get('model', '').strip()
+        year = data.get('year')
+        price = data.get('price')
+        availability = data.get('availability')
+        
+        # Validate input
+        if not brand or not model:
+            return jsonify({'success': False, 'error': 'Brand and model are required'}), 400
+        
+        if year is not None and (not isinstance(year, int) or year < 1900 or year > 2100):
+            return jsonify({'success': False, 'error': 'Valid year is required'}), 400
+        
+        if price is not None and price < 0:
+            return jsonify({'success': False, 'error': 'Price must be positive'}), 400
+        
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            # Check if vehicle exists
+            cursor.execute("SELECT id FROM vehicles WHERE id = %s", (vehicle_id,))
+            if not cursor.fetchone():
+                cursor.close()
+                return jsonify({'success': False, 'error': 'Vehicle not found'}), 404
+            
+            # Update vehicle
+            query = """
+                UPDATE vehicles
+                SET brand = %s, model = %s, year = %s, price = %s, availability = %s
+                WHERE id = %s
+                RETURNING id, brand, model, year, price, availability
+            """
+            cursor.execute(query, (brand, model, year, price, availability, vehicle_id))
+            result = cursor.fetchone()
+            conn.commit()
+            
+            vehicle = {
+                'id': result[0],
+                'brand': result[1],
+                'model': result[2],
+                'year': result[3],
+                'price': float(result[4]),
+                'price_formatted': f"{float(result[4]):,.2f}",
+                'availability': bool(result[5])
+            }
+            
+            cursor.close()
+            return jsonify({'success': True, 'vehicle': vehicle})
+            
+        except psycopg2.Error as e:
+            logger.error(f"Database error updating vehicle: {str(e)}")
+            if conn:
+                conn.rollback()
+            return jsonify({'success': False, 'error': f'Database error: {str(e)}'}), 500
+        except ValueError as e:
+            logger.error(f"Configuration error updating vehicle: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+        except Exception as e:
+            logger.error(f"Unexpected error updating vehicle: {str(e)}")
+            if conn:
+                conn.rollback()
+            return jsonify({'success': False, 'error': 'Unexpected error'}), 500
+        finally:
+            if conn:
+                return_db_connection(conn)
+    except Exception as e:
+        logger.error(f"Error in update_vehicle: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/production/api/vehicles/<int:vehicle_id>', methods=['DELETE'])
+def delete_vehicle(vehicle_id):
+    """Delete a vehicle."""
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Check if vehicle exists
+        cursor.execute("SELECT id FROM vehicles WHERE id = %s", (vehicle_id,))
+        if not cursor.fetchone():
+            cursor.close()
+            return jsonify({'success': False, 'error': 'Vehicle not found'}), 404
+        
+        # Delete vehicle
+        cursor.execute("DELETE FROM vehicles WHERE id = %s", (vehicle_id,))
+        conn.commit()
+        cursor.close()
+        
+        return jsonify({'success': True, 'message': 'Vehicle deleted successfully'})
+        
+    except psycopg2.Error as e:
+        logger.error(f"Database error deleting vehicle: {str(e)}")
+        if conn:
+            conn.rollback()
+        return jsonify({'success': False, 'error': f'Database error: {str(e)}'}), 500
+    except ValueError as e:
+        logger.error(f"Configuration error deleting vehicle: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    except Exception as e:
+        logger.error(f"Unexpected error deleting vehicle: {str(e)}")
+        if conn:
+            conn.rollback()
+        return jsonify({'success': False, 'error': 'Unexpected error'}), 500
+    finally:
+        if conn:
+            return_db_connection(conn)
+
 @app.route('/production/api/conversions', methods=['POST'])
 def save_conversion():
     """Save a conversion to the database."""

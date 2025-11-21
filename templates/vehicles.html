@@ -4,9 +4,17 @@
 
 {% block content %}
 <div class="px-4 py-6 sm:px-0">
-    <div class="mb-6">
-        <h1 class="text-3xl font-bold text-gray-900">Vehicle Catalog</h1>
-        <p class="mt-2 text-sm text-gray-600">Browse our complete catalog of vehicles from Aurora PostgreSQL</p>
+    <div class="mb-6 flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Vehicle Catalog</h1>
+            <p class="mt-2 text-sm text-gray-600">Browse our complete catalog of vehicles from Aurora PostgreSQL</p>
+        </div>
+        <button onclick="openCreateModal()" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            <svg class="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Add Vehicle
+        </button>
     </div>
 
     {% if error %}
@@ -46,6 +54,9 @@
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                             Availability
                         </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                            Actions
+                        </th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -82,6 +93,18 @@
                                 Not Available
                             </span>
                             {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button onclick="openEditModal({{ vehicle.id }}, '{{ vehicle.brand }}', '{{ vehicle.model }}', {{ vehicle.year }}, {{ vehicle.price }}, {{ vehicle.availability|lower }})" class="text-indigo-600 hover:text-indigo-900 mr-4">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </button>
+                            <button onclick="deleteVehicle({{ vehicle.id }}, '{{ vehicle.brand }} {{ vehicle.model }}')" class="text-red-600 hover:text-red-900">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
                         </td>
                     </tr>
                     {% endfor %}
@@ -121,5 +144,175 @@
     </div>
     {% endif %}
 </div>
+
+<!-- Create/Edit Vehicle Modal -->
+<div id="vehicleModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="modalTitle" class="text-lg font-medium text-gray-900">Add Vehicle</h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <form id="vehicleForm" onsubmit="saveVehicle(event)">
+                <input type="hidden" id="vehicleId" name="vehicleId">
+                <div class="mb-4">
+                    <label for="brand" class="block text-sm font-medium text-gray-700">Brand</label>
+                    <input type="text" id="brand" name="brand" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div class="mb-4">
+                    <label for="model" class="block text-sm font-medium text-gray-700">Model</label>
+                    <input type="text" id="model" name="model" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div class="mb-4">
+                    <label for="year" class="block text-sm font-medium text-gray-700">Year</label>
+                    <input type="number" id="year" name="year" min="1900" max="2100" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div class="mb-4">
+                    <label for="price" class="block text-sm font-medium text-gray-700">Price</label>
+                    <input type="number" id="price" name="price" min="0" step="0.01" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div class="mb-4">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="availability" name="availability" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-offset-0 focus:ring-indigo-200 focus:ring-opacity-50">
+                        <span class="ml-2 text-sm text-gray-700">Available</span>
+                    </label>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Status Message -->
+<div id="statusMessage" class="hidden fixed top-4 right-4 z-50"></div>
+
+<script>
+let currentVehicleId = null;
+
+function openCreateModal() {
+    currentVehicleId = null;
+    document.getElementById('modalTitle').textContent = 'Add Vehicle';
+    document.getElementById('vehicleForm').reset();
+    document.getElementById('vehicleId').value = '';
+    document.getElementById('vehicleModal').classList.remove('hidden');
+}
+
+function openEditModal(id, brand, model, year, price, availability) {
+    currentVehicleId = id;
+    document.getElementById('modalTitle').textContent = 'Edit Vehicle';
+    document.getElementById('vehicleId').value = id;
+    document.getElementById('brand').value = brand;
+    document.getElementById('model').value = model;
+    document.getElementById('year').value = year;
+    document.getElementById('price').value = price;
+    document.getElementById('availability').checked = availability === 'true';
+    document.getElementById('vehicleModal').classList.remove('hidden');
+}
+
+function closeModal() {
+    document.getElementById('vehicleModal').classList.add('hidden');
+    currentVehicleId = null;
+}
+
+function showStatus(message, isSuccess = true) {
+    const statusDiv = document.getElementById('statusMessage');
+    statusDiv.className = `fixed top-4 right-4 z-50 p-4 rounded-md shadow-lg ${isSuccess ? 'bg-green-50 border border-green-400 text-green-800' : 'bg-red-50 border border-red-400 text-red-800'}`;
+    statusDiv.textContent = message;
+    statusDiv.classList.remove('hidden');
+    setTimeout(() => {
+        statusDiv.classList.add('hidden');
+    }, 3000);
+}
+
+async function saveVehicle(event) {
+    event.preventDefault();
+    
+    const formData = {
+        brand: document.getElementById('brand').value.trim(),
+        model: document.getElementById('model').value.trim(),
+        year: parseInt(document.getElementById('year').value),
+        price: parseFloat(document.getElementById('price').value),
+        availability: document.getElementById('availability').checked
+    };
+    
+    const url = currentVehicleId 
+        ? `/production/api/vehicles/${currentVehicleId}`
+        : '/production/api/vehicles';
+    const method = currentVehicleId ? 'PUT' : 'POST';
+    
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showStatus(currentVehicleId ? 'Vehicle updated successfully!' : 'Vehicle created successfully!', true);
+            closeModal();
+            // Reload the page to show updated data
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        } else {
+            showStatus(data.error || 'An error occurred', false);
+        }
+    } catch (error) {
+        showStatus('Network error: ' + error.message, false);
+    }
+}
+
+async function deleteVehicle(id, vehicleName) {
+    if (!confirm(`Are you sure you want to delete "${vehicleName}"? This action cannot be undone.`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/production/api/vehicles/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showStatus('Vehicle deleted successfully!', true);
+            // Reload the page to show updated data
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        } else {
+            showStatus(data.error || 'Failed to delete vehicle', false);
+        }
+    } catch (error) {
+        showStatus('Network error: ' + error.message, false);
+    }
+}
+
+// Close modal when clicking outside
+document.getElementById('vehicleModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeModal();
+    }
+});
+</script>
+
 {% endblock %}
 
