@@ -6,7 +6,7 @@
 <div class="px-4 py-6 sm:px-0">
     <div class="mb-6">
         <h1 class="text-3xl font-bold text-gray-900">Exchange Rates</h1>
-        <p class="mt-2 text-sm text-gray-600">Real-time currency exchange rates from ExchangeRates API</p>
+        <p class="mt-2 text-sm text-gray-600">Real-time currency exchange rates from Currency Data API</p>
     </div>
 
     {% if error %}
@@ -25,55 +25,253 @@
     {% elif rates %}
     <div class="bg-white shadow rounded-lg overflow-hidden">
         <div class="px-6 py-4 bg-indigo-600">
-            <h2 class="text-xl font-semibold text-white">Current Exchange Rates (Base: USD)</h2>
-            {% if rates.date %}
-            <p class="text-sm text-indigo-100 mt-1">Last updated: {{ rates.date }}</p>
-            {% endif %}
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h2 class="text-xl font-semibold text-white">Current Exchange Rates (Base: {{ rates.base }})</h2>
+                    {% if rates.date %}
+                    <p class="text-sm text-indigo-100 mt-1">Last updated: {{ rates.date }}</p>
+                    {% endif %}
+                </div>
+                <div class="flex items-center gap-2">
+                    <label for="baseCurrency" class="text-sm font-medium text-indigo-100">Change Base:</label>
+                    <select 
+                        id="baseCurrency" 
+                        name="baseCurrency"
+                        onchange="changeBase(this.value)"
+                        class="px-3 py-2 bg-white border border-indigo-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm font-medium text-gray-900"
+                    >
+                        <option value="USD" {% if rates.base == 'USD' %}selected{% endif %}>USD</option>
+                        <option value="EUR" {% if rates.base == 'EUR' %}selected{% endif %}>EUR</option>
+                        <option value="PEN" {% if rates.base == 'PEN' %}selected{% endif %}>PEN</option>
+                    </select>
+                </div>
+            </div>
         </div>
         
         <div class="p-6">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- USD Card -->
-                <div class="bg-blue-50 rounded-lg p-6 border-2 border-blue-200">
-                    <div class="flex items-center justify-between mb-4">
-                        <span class="text-2xl font-bold text-blue-900">USD</span>
-                        <svg class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+                {# Display base currency first, then others #}
+                {% if rates.base == 'USD' %}
+                    <!-- USD Card (Base) -->
+                    <div class="bg-blue-50 rounded-lg p-6 border-2 border-blue-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-2xl font-bold text-blue-900">USD <span class="text-sm font-normal text-blue-700">(Base)</span></span>
+                            <svg class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <p class="text-4xl font-bold text-blue-900">{{ "%.4f"|format(rates.USD) }}</p>
+                        <p class="text-sm text-blue-600 mt-2">US Dollar</p>
                     </div>
-                    <p class="text-4xl font-bold text-blue-900">{{ "%.4f"|format(rates.USD) }}</p>
-                    <p class="text-sm text-blue-600 mt-2">US Dollar</p>
-                </div>
-
-                <!-- EUR Card -->
-                <div class="bg-green-50 rounded-lg p-6 border-2 border-green-200">
-                    <div class="flex items-center justify-between mb-4">
-                        <span class="text-2xl font-bold text-green-900">EUR</span>
-                        <svg class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+                    <!-- EUR Card -->
+                    <div class="bg-green-50 rounded-lg p-6 border-2 border-green-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-2xl font-bold text-green-900">EUR</span>
+                            <svg class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <p class="text-4xl font-bold text-green-900">{{ "%.4f"|format(rates.EUR) }}</p>
+                        <p class="text-sm text-green-600 mt-2">Euro</p>
                     </div>
-                    <p class="text-4xl font-bold text-green-900">{{ "%.4f"|format(rates.EUR) }}</p>
-                    <p class="text-sm text-green-600 mt-2">Euro</p>
-                </div>
-
-                <!-- PEN Card -->
-                <div class="bg-red-50 rounded-lg p-6 border-2 border-red-200">
-                    <div class="flex items-center justify-between mb-4">
-                        <span class="text-2xl font-bold text-red-900">PEN</span>
-                        <svg class="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+                    <!-- PEN Card -->
+                    <div class="bg-red-50 rounded-lg p-6 border-2 border-red-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-2xl font-bold text-red-900">PEN</span>
+                            <svg class="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <p class="text-4xl font-bold text-red-900">{{ "%.4f"|format(rates.PEN) }}</p>
+                        <p class="text-sm text-red-600 mt-2">Peruvian Sol</p>
                     </div>
-                    <p class="text-4xl font-bold text-red-900">{{ "%.4f"|format(rates.PEN) }}</p>
-                    <p class="text-sm text-red-600 mt-2">Peruvian Sol</p>
-                </div>
+                {% elif rates.base == 'EUR' %}
+                    <!-- EUR Card (Base) -->
+                    <div class="bg-green-50 rounded-lg p-6 border-2 border-green-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-2xl font-bold text-green-900">EUR <span class="text-sm font-normal text-green-700">(Base)</span></span>
+                            <svg class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <p class="text-4xl font-bold text-green-900">{{ "%.4f"|format(rates.EUR) }}</p>
+                        <p class="text-sm text-green-600 mt-2">Euro</p>
+                    </div>
+                    <!-- USD Card -->
+                    <div class="bg-blue-50 rounded-lg p-6 border-2 border-blue-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-2xl font-bold text-blue-900">USD</span>
+                            <svg class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <p class="text-4xl font-bold text-blue-900">{{ "%.4f"|format(rates.USD) }}</p>
+                        <p class="text-sm text-blue-600 mt-2">US Dollar</p>
+                    </div>
+                    <!-- PEN Card -->
+                    <div class="bg-red-50 rounded-lg p-6 border-2 border-red-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-2xl font-bold text-red-900">PEN</span>
+                            <svg class="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <p class="text-4xl font-bold text-red-900">{{ "%.4f"|format(rates.PEN) }}</p>
+                        <p class="text-sm text-red-600 mt-2">Peruvian Sol</p>
+                    </div>
+                {% elif rates.base == 'PEN' %}
+                    <!-- PEN Card (Base) -->
+                    <div class="bg-red-50 rounded-lg p-6 border-2 border-red-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-2xl font-bold text-red-900">PEN <span class="text-sm font-normal text-red-700">(Base)</span></span>
+                            <svg class="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <p class="text-4xl font-bold text-red-900">{{ "%.4f"|format(rates.PEN) }}</p>
+                        <p class="text-sm text-red-600 mt-2">Peruvian Sol</p>
+                    </div>
+                    <!-- USD Card -->
+                    <div class="bg-blue-50 rounded-lg p-6 border-2 border-blue-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-2xl font-bold text-blue-900">USD</span>
+                            <svg class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <p class="text-4xl font-bold text-blue-900">{{ "%.4f"|format(rates.USD) }}</p>
+                        <p class="text-sm text-blue-600 mt-2">US Dollar</p>
+                    </div>
+                    <!-- EUR Card -->
+                    <div class="bg-green-50 rounded-lg p-6 border-2 border-green-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-2xl font-bold text-green-900">EUR</span>
+                            <svg class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <p class="text-4xl font-bold text-green-900">{{ "%.4f"|format(rates.EUR) }}</p>
+                        <p class="text-sm text-green-600 mt-2">Euro</p>
+                    </div>
+                {% endif %}
             </div>
 
             <div class="mt-6 pt-6 border-t border-gray-200">
                 <p class="text-sm text-gray-500 text-center">
-                    Rates are fetched from <a href="https://apilayer.com/marketplace/exchangerates_data-api" target="_blank" class="text-indigo-600 hover:text-indigo-800">ExchangeRates API</a>
+                    Rates are fetched from <a href="https://apilayer.com/marketplace/currency_data-api" target="_blank" class="text-indigo-600 hover:text-indigo-800">Currency Data API</a>
                 </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Currency Converter Section -->
+    <div class="mt-6 bg-white shadow rounded-lg overflow-hidden">
+        <div class="px-6 py-4 bg-indigo-600">
+            <h2 class="text-xl font-semibold text-white">Currency Converter</h2>
+            <p class="text-sm text-indigo-100 mt-1">Convert any amount between USD, EUR, and PEN</p>
+        </div>
+        
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                <!-- Amount Input -->
+                <div class="md:col-span-2">
+                    <label for="amount" class="block text-sm font-medium text-gray-700 mb-2">Amount</label>
+                    <input 
+                        type="number" 
+                        id="amount" 
+                        name="amount" 
+                        step="0.01" 
+                        min="0" 
+                        placeholder="Enter amount"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-lg"
+                    >
+                </div>
+
+                <!-- From Currency -->
+                <div>
+                    <label for="fromCurrency" class="block text-sm font-medium text-gray-700 mb-2">From</label>
+                    <select 
+                        id="fromCurrency" 
+                        name="fromCurrency"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-lg"
+                    >
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="PEN">PEN</option>
+                    </select>
+                </div>
+
+                <!-- To Currency -->
+                <div>
+                    <label for="toCurrency" class="block text-sm font-medium text-gray-700 mb-2">To</label>
+                    <select 
+                        id="toCurrency" 
+                        name="toCurrency"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-lg"
+                    >
+                        <option value="USD">USD</option>
+                        <option value="EUR" selected>EUR</option>
+                        <option value="PEN">PEN</option>
+                    </select>
+                </div>
+
+                <!-- Convert Button -->
+                <div>
+                    <button 
+                        id="convertBtn"
+                        onclick="convertCurrency()"
+                        class="w-full px-4 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors text-lg"
+                    >
+                        Convert
+                    </button>
+                </div>
+            </div>
+
+            <!-- Result Display -->
+            <div id="result" class="mt-6 hidden">
+                <div class="bg-indigo-50 border-l-4 border-indigo-400 p-4 rounded">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-indigo-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-indigo-800">
+                                <span id="resultText"></span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conversion History Section -->
+    <div class="mt-6 bg-white shadow rounded-lg overflow-hidden">
+        <div class="px-6 py-4 bg-indigo-600">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-semibold text-white">Conversion History</h2>
+                    <p class="text-sm text-indigo-100 mt-1" id="historyStatus">Loading history...</p>
+                </div>
+                <button 
+                    onclick="loadHistory()"
+                    class="px-4 py-2 bg-indigo-700 text-white text-sm font-medium rounded-md hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                >
+                    Refresh
+                </button>
+            </div>
+        </div>
+        
+        <div class="p-6">
+            <div id="historyContainer">
+                <div class="text-center py-8">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <p class="mt-2 text-sm text-gray-500">Loading conversion history...</p>
+                </div>
             </div>
         </div>
     </div>
@@ -101,5 +299,314 @@
     </div>
     {% endif %}
 </div>
+
+<script>
+// Store exchange rates from server
+const exchangeRates = {
+    {% if rates %}
+    base: '{{ rates.base }}',
+    USD: {{ rates.USD }},
+    EUR: {{ rates.EUR }},
+    PEN: {{ rates.PEN }}
+    {% else %}
+    base: 'USD',
+    USD: 1.0,
+    EUR: 0.0,
+    PEN: 0.0
+    {% endif %}
+};
+
+// Function to change base currency
+function changeBase(newBase) {
+    if (newBase && newBase !== exchangeRates.base) {
+        window.location.href = `/exchange?base=${newBase}`;
+    }
+}
+
+function convertCurrency() {
+    const amount = parseFloat(document.getElementById('amount').value);
+    const fromCurrency = document.getElementById('fromCurrency').value;
+    const toCurrency = document.getElementById('toCurrency').value;
+    const resultDiv = document.getElementById('result');
+    const resultText = document.getElementById('resultText');
+
+    // Validate input
+    if (isNaN(amount) || amount < 0) {
+        resultDiv.classList.remove('hidden');
+        const resultContainer = resultDiv.querySelector('div');
+        resultContainer.className = 'bg-red-50 border-l-4 border-red-400 p-4 rounded';
+        resultText.textContent = 'Please enter a valid amount';
+        resultText.className = 'text-sm font-medium text-red-800';
+        return;
+    }
+
+    // Check if rates are available
+    const allRatesValid = exchangeRates.USD > 0 && exchangeRates.EUR > 0 && exchangeRates.PEN > 0;
+    if (!allRatesValid) {
+        resultDiv.classList.remove('hidden');
+        const resultContainer = resultDiv.querySelector('div');
+        resultContainer.className = 'bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded';
+        resultText.textContent = 'Exchange rates are not available. Please try again later.';
+        resultText.className = 'text-sm font-medium text-yellow-800';
+        return;
+    }
+
+    // Convert to base currency first
+    let amountInBase;
+    if (fromCurrency === exchangeRates.base) {
+        amountInBase = amount;
+    } else {
+        // Get the rate from source currency to base currency
+        const rateToBase = exchangeRates[fromCurrency];
+        if (rateToBase && rateToBase > 0) {
+            amountInBase = amount / rateToBase;
+        } else {
+            resultDiv.classList.remove('hidden');
+            const resultContainer = resultDiv.querySelector('div');
+            resultContainer.className = 'bg-red-50 border-l-4 border-red-400 p-4 rounded';
+            resultText.textContent = 'Invalid exchange rate for conversion';
+            resultText.className = 'text-sm font-medium text-red-800';
+            return;
+        }
+    }
+
+    // Convert from base currency to target currency
+    let convertedAmount;
+    if (toCurrency === exchangeRates.base) {
+        convertedAmount = amountInBase;
+    } else {
+        // Get the rate from base currency to target currency
+        const rateFromBase = exchangeRates[toCurrency];
+        if (rateFromBase && rateFromBase > 0) {
+            convertedAmount = amountInBase * rateFromBase;
+        } else {
+            resultDiv.classList.remove('hidden');
+            const resultContainer = resultDiv.querySelector('div');
+            resultContainer.className = 'bg-red-50 border-l-4 border-red-400 p-4 rounded';
+            resultText.textContent = 'Invalid exchange rate for conversion';
+            resultText.className = 'text-sm font-medium text-red-800';
+            return;
+        }
+    }
+
+    // Display result
+    resultDiv.classList.remove('hidden');
+    const resultContainer = resultDiv.querySelector('div');
+    resultContainer.className = 'bg-indigo-50 border-l-4 border-indigo-400 p-4 rounded';
+    resultText.className = 'text-sm font-medium text-indigo-800';
+    resultText.textContent = `${amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${fromCurrency} = ${convertedAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${toCurrency}`;
+    
+    // Save conversion to history
+    saveConversion({
+        amount: amount,
+        from_currency: fromCurrency,
+        to_currency: toCurrency,
+        converted_amount: convertedAmount,
+        base_currency: exchangeRates.base
+    });
+}
+
+// Cache for history data
+const historyCache = {
+    data: null,
+    timestamp: null,
+    ttl: 30000 // 30 seconds cache
+};
+
+// Save conversion to database or localStorage
+async function saveConversion(conversionData) {
+    try {
+        const response = await fetch('/api/conversions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(conversionData)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Invalidate cache
+            historyCache.data = null;
+            historyCache.timestamp = null;
+            // Reload history
+            loadHistory();
+        } else if (result.use_localStorage || response.status === 503) {
+            // Fallback to localStorage
+            saveToLocalStorage(conversionData);
+            // Invalidate cache
+            historyCache.data = null;
+            historyCache.timestamp = null;
+            // Reload history
+            loadHistory();
+        }
+    } catch (error) {
+        console.error('Error saving conversion:', error);
+        // Fallback to localStorage
+        saveToLocalStorage(conversionData);
+        // Invalidate cache
+        historyCache.data = null;
+        historyCache.timestamp = null;
+        // Reload history
+        loadHistory();
+    }
+}
+
+// Save to localStorage
+function saveToLocalStorage(conversionData) {
+    try {
+        let conversions = JSON.parse(localStorage.getItem('conversions') || '[]');
+        const newConversion = {
+            id: Date.now(),
+            ...conversionData,
+            created_at: new Date().toISOString()
+        };
+        conversions.unshift(newConversion);
+        // Keep only last 100 conversions
+        if (conversions.length > 100) {
+            conversions = conversions.slice(0, 100);
+        }
+        localStorage.setItem('conversions', JSON.stringify(conversions));
+    } catch (error) {
+        console.error('Error saving to localStorage:', error);
+    }
+}
+
+// Load history from database or localStorage
+async function loadHistory() {
+    const historyContainer = document.getElementById('historyContainer');
+    const historyStatus = document.getElementById('historyStatus');
+    
+    // Check cache first
+    const now = Date.now();
+    if (historyCache.data && historyCache.timestamp && (now - historyCache.timestamp) < historyCache.ttl) {
+        displayHistory(historyCache.data);
+        historyStatus.textContent = 'History loaded from cache';
+        return;
+    }
+    
+    historyStatus.textContent = 'Loading history...';
+    
+    try {
+        const response = await fetch('/api/conversions?limit=50');
+        const result = await response.json();
+        
+        if (result.success && result.conversions) {
+            // Update cache
+            historyCache.data = result.conversions;
+            historyCache.timestamp = now;
+            displayHistory(result.conversions);
+            historyStatus.textContent = 'History loaded from database';
+        } else if (result.use_localStorage || response.status === 503) {
+            // Fallback to localStorage
+            const localConversions = loadFromLocalStorage();
+            historyCache.data = localConversions;
+            historyCache.timestamp = now;
+            displayHistory(localConversions);
+            historyStatus.textContent = 'History loaded from localStorage (database unavailable)';
+        } else {
+            throw new Error(result.error || 'Failed to load history');
+        }
+    } catch (error) {
+        console.error('Error loading history:', error);
+        // Fallback to localStorage
+        const localConversions = loadFromLocalStorage();
+        historyCache.data = localConversions;
+        historyCache.timestamp = now;
+        displayHistory(localConversions);
+        historyStatus.textContent = 'History loaded from localStorage (database unavailable)';
+    }
+}
+
+// Load from localStorage
+function loadFromLocalStorage() {
+    try {
+        const conversions = JSON.parse(localStorage.getItem('conversions') || '[]');
+        return conversions;
+    } catch (error) {
+        console.error('Error loading from localStorage:', error);
+        return [];
+    }
+}
+
+// Display history
+function displayHistory(conversions) {
+    const historyContainer = document.getElementById('historyContainer');
+    
+    if (!conversions || conversions.length === 0) {
+        historyContainer.innerHTML = `
+            <div class="text-center py-8">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p class="mt-2 text-sm text-gray-500">No conversion history yet</p>
+                <p class="text-xs text-gray-400 mt-1">Your conversions will appear here</p>
+            </div>
+        `;
+        return;
+    }
+    
+    historyContainer.innerHTML = `
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">From</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">To</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Result</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Base</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    ${conversions.map(conv => `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                ${new Date(conv.created_at).toLocaleString()}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                ${conv.from_currency}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                ${conv.to_currency}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                ${parseFloat(conv.amount).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 6})}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-indigo-600">
+                                ${parseFloat(conv.converted_amount).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 6})}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">
+                                    ${conv.base_currency}
+                                </span>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+// Allow Enter key to trigger conversion
+document.addEventListener('DOMContentLoaded', function() {
+    const amountInput = document.getElementById('amount');
+    const convertBtn = document.getElementById('convertBtn');
+    
+    if (amountInput) {
+        amountInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                convertCurrency();
+            }
+        });
+    }
+    
+    // Load history on page load
+    loadHistory();
+});
+</script>
 {% endblock %}
 

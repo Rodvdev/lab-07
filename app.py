@@ -1,6 +1,7 @@
 import os
 import logging
-from flask import Flask, render_template, request
+from datetime import datetime
+from flask import Flask, render_template, request, jsonify
 import psycopg2
 from psycopg2 import pool
 import requests
@@ -24,8 +25,8 @@ DB_CONFIG = {
     'port': 5432
 }
 
-# Exchange Rates API configuration
-EXCHANGE_API_URL = 'https://api.apilayer.com/exchangerates_data/latest'
+# Currency Data API configuration
+EXCHANGE_API_URL = 'https://api.apilayer.com/currency_data/live'
 EXCHANGE_API_KEY = os.getenv('API_KEY_EXCHANGE')
 
 # Database connection pool (minimal for Lambda)
@@ -58,30 +59,81 @@ def index():
 
 @app.route('/exchange')
 def exchange():
-    """Display exchange rates from ExchangeRates API."""
+    """Display exchange rates from Currency Data API."""
     rates = None
     error = None
+    base_currency = request.args.get('base', 'USD').upper()
+    
+    # Validate base currency
+    if base_currency not in ['USD', 'EUR', 'PEN']:
+        base_currency = 'USD'
     
     try:
         headers = {
             'apikey': EXCHANGE_API_KEY
         }
+        
+        # Get all currencies we need (USD, EUR, PEN)
+        # We'll request based on USD and convert if needed
         params = {
             'base': 'USD',
-            'symbols': 'USD,EUR,PEN'
+            'symbols': 'EUR,PEN'
         }
         
         response = requests.get(EXCHANGE_API_URL, headers=headers, params=params, timeout=10)
         response.raise_for_status()
         
         data = response.json()
-        rates = {
-            'USD': data.get('rates', {}).get('USD', 1.0),
-            'EUR': data.get('rates', {}).get('EUR', 0.0),
-            'PEN': data.get('rates', {}).get('PEN', 0.0),
-            'date': data.get('date', 'N/A')
-        }
         
+        # Currency Data API returns quotes in format "USDEUR", "USDPEN", etc.
+        if data.get('success') and 'quotes' in data:
+            quotes = data.get('quotes', {})
+            timestamp = data.get('timestamp', 0)
+            
+            # Convert timestamp to readable date
+            date_str = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S') if timestamp else 'N/A'
+            
+            # Get base rates from USD
+            usd_eur = quotes.get('USDEUR', 0.0)
+            usd_pen = quotes.get('USDPEN', 0.0)
+            
+            # Calculate rates based on selected base currency
+            if base_currency == 'USD':
+                rates = {
+                    'base': 'USD',
+                    'USD': 1.0,
+                    'EUR': usd_eur,
+                    'PEN': usd_pen,
+                    'timestamp': timestamp,
+                    'date': date_str
+                }
+            elif base_currency == 'EUR':
+                # Convert from USD base to EUR base
+                eur_usd = 1.0 / usd_eur if usd_eur > 0 else 0.0
+                eur_pen = usd_pen / usd_eur if usd_eur > 0 else 0.0
+                rates = {
+                    'base': 'EUR',
+                    'USD': eur_usd,
+                    'EUR': 1.0,
+                    'PEN': eur_pen,
+                    'timestamp': timestamp,
+                    'date': date_str
+                }
+            elif base_currency == 'PEN':
+                # Convert from USD base to PEN base
+                pen_usd = 1.0 / usd_pen if usd_pen > 0 else 0.0
+                pen_eur = usd_eur / usd_pen if usd_pen > 0 else 0.0
+                rates = {
+                    'base': 'PEN',
+                    'USD': pen_usd,
+                    'EUR': pen_eur,
+                    'PEN': 1.0,
+                    'timestamp': timestamp,
+                    'date': date_str
+                }
+        else:
+            error = f"API returned error: {data.get('error', {}).get('info', 'Unknown error')}"
+            
     except requests.exceptions.RequestException as e:
         logger.error(f"Error fetching exchange rates: {str(e)}")
         error = f"Failed to fetch exchange rates: {str(e)}"
@@ -89,7 +141,7 @@ def exchange():
         logger.error(f"Unexpected error in exchange route: {str(e)}")
         error = f"An unexpected error occurred: {str(e)}"
     
-    return render_template('exchange.html', rates=rates, error=error)
+    return render_template('exchange.html', rates=rates, error=error, base_currency=base_currency)
 
 @app.route('/vehicles')
 def vehicles():
@@ -135,6 +187,105 @@ def vehicles():
             return_db_connection(conn)
     
     return render_template('vehicles.html', vehicles=vehicles_list, error=error)
+
+@app.route('/api/conversions', methods=['POST'])
+def save_conversion():
+    """Save a conversion to the database."""
+    try:
+        data = request.get_json()
+        amount = float(data.get('amount', 0))
+        from_currency = data.get('from_currency', '').upper()
+        to_currency = data.get('to_currency', '').upper()
+        converted_amount = float(data.get('converted_amount', 0))
+        base_currency = data.get('base_currency', 'USD').upper()
+        
+        # Validate input
+        if not from_currency or not to_currency or from_currency not in ['USD', 'EUR', 'PEN'] or to_currency not in ['USD', 'EUR', 'PEN']:
+            return jsonify({'success': False, 'error': 'Invalid currency'}), 400
+        
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            query = """
+                INSERT INTO conversions (amount, from_currency, to_currency, converted_amount, base_currency)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING id, created_at
+            """
+            cursor.execute(query, (amount, from_currency, to_currency, converted_amount, base_currency))
+            result = cursor.fetchone()
+            conn.commit()
+            cursor.close()
+            
+            return jsonify({
+                'success': True,
+                'id': result[0],
+                'created_at': result[1].isoformat() if result[1] else None
+            })
+        except psycopg2.Error as e:
+            logger.error(f"Database error saving conversion: {str(e)}")
+            if conn:
+                conn.rollback()
+            # Return success but indicate database unavailable
+            return jsonify({'success': False, 'error': 'Database unavailable', 'use_localStorage': True}), 503
+        except Exception as e:
+            logger.error(f"Unexpected error saving conversion: {str(e)}")
+            if conn:
+                conn.rollback()
+            return jsonify({'success': False, 'error': 'Unexpected error', 'use_localStorage': True}), 500
+        finally:
+            if conn:
+                return_db_connection(conn)
+    except Exception as e:
+        logger.error(f"Error in save_conversion: {str(e)}")
+        return jsonify({'success': False, 'error': str(e), 'use_localStorage': True}), 500
+
+@app.route('/api/conversions', methods=['GET'])
+def get_conversions():
+    """Get conversion history from the database."""
+    limit = request.args.get('limit', 50, type=int)
+    if limit > 100:
+        limit = 100
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        query = """
+            SELECT id, amount, from_currency, to_currency, converted_amount, base_currency, created_at
+            FROM conversions
+            ORDER BY created_at DESC
+            LIMIT %s
+        """
+        cursor.execute(query, (limit,))
+        rows = cursor.fetchall()
+        cursor.close()
+        
+        conversions = [
+            {
+                'id': row[0],
+                'amount': float(row[1]),
+                'from_currency': row[2],
+                'to_currency': row[3],
+                'converted_amount': float(row[4]),
+                'base_currency': row[5],
+                'created_at': row[6].isoformat() if row[6] else None
+            }
+            for row in rows
+        ]
+        
+        return jsonify({'success': True, 'conversions': conversions})
+    except psycopg2.Error as e:
+        logger.error(f"Database error getting conversions: {str(e)}")
+        return jsonify({'success': False, 'error': 'Database unavailable', 'use_localStorage': True}), 503
+    except Exception as e:
+        logger.error(f"Unexpected error getting conversions: {str(e)}")
+        return jsonify({'success': False, 'error': 'Unexpected error', 'use_localStorage': True}), 500
+    finally:
+        if conn:
+            return_db_connection(conn)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)
