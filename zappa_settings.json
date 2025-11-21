@@ -5,7 +5,7 @@
         "profile_name": null,
         "project_name": "flask-lambda-app",
         "runtime": "python3.9",
-        "s3_bucket": "zappa-deployments",
+        "s3_bucket": "zappa-deployments-rodrigo-1763683876",
         "memory_size": 512,
         "timeout_seconds": 30,
         "api_gateway_stage": "production",
