@@ -24,7 +24,8 @@ def connect_to_db(host_override=None, max_retries=5, retry_delay=10):
         'user': os.getenv('DB_USER'),
         'password': os.getenv('DB_PASS'),
         'port': 5432,
-        'connect_timeout': 15
+        'connect_timeout': 15,
+        'sslmode': 'require'  # Required for Neon database
     }
     
     # Validate config

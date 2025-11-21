@@ -23,7 +23,8 @@ DB_CONFIG = {
     'user': os.getenv('DB_USER'),
     'password': os.getenv('DB_PASS'),
     'port': 5432,
-    'connect_timeout': 10  # Add connection timeout
+    'connect_timeout': 10,  # Add connection timeout
+    'sslmode': 'require'  # Required for Neon database
 }
 
 # Currency Data API configuration
@@ -190,6 +191,7 @@ def vehicles():
                 'model': row[2],
                 'year': row[3],
                 'price': float(row[4]) if row[4] else 0.0,
+                'price_formatted': f"{float(row[4]):,.2f}" if row[4] else "0.00",
                 'availability': bool(row[5]) if len(row) > 5 else False
             }
             for row in rows
