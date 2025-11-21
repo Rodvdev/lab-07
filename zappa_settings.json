@@ -22,12 +22,14 @@
             ".zappa/"
         ],
         "events": [],
-        "environment_variables": {},
-        "keep_warm": false,
-        "vpc_config": {
-            "SubnetIds": ["subnet-0110405aee90016b7", "subnet-07f0a23dfb5e3f382"],
-            "SecurityGroupIds": ["sg-024c779fb8b2cbfcf"]
+        "environment_variables": {
+            "API_KEY_EXCHANGE": "7ONfVtkBuVJrXWtpRI789pTGWvwqTx1n",
+            "DB_HOST": "ep-withered-lake-ad990y2p-pooler.c-2.us-east-1.aws.neon.tech",
+            "DB_NAME": "neondb",
+            "DB_USER": "neondb_owner",
+            "DB_PASS": "npg_VRjMdfG37uZn"
         },
+        "keep_warm": false,
         "log_level": "INFO",
         "lambda_description": "Flask Lambda Application - Vehicle Exchange App"
     }

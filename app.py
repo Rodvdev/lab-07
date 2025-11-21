@@ -74,12 +74,12 @@ def return_db_connection(conn):
     if db_pool and conn:
         db_pool.putconn(conn)
 
-@app.route('/production/')
+@app.route('/')
 def index():
     """Home page with navigation links."""
     return render_template('index.html')
 
-@app.route('/production/exchange')
+@app.route('/exchange')
 def exchange():
     """Display exchange rates from Currency Data API."""
     rates = None
@@ -165,7 +165,7 @@ def exchange():
     
     return render_template('exchange.html', rates=rates, error=error, base_currency=base_currency)
 
-@app.route('/production/vehicles')
+@app.route('/vehicles')
 def vehicles():
     """Display vehicle catalog from Aurora PostgreSQL."""
     vehicles_list = []
@@ -220,7 +220,7 @@ def vehicles():
 
 # Vehicle CRUD API Routes
 
-@app.route('/production/api/vehicles', methods=['POST'])
+@app.route('/api/vehicles', methods=['POST'])
 def create_vehicle():
     """Create a new vehicle."""
     try:
@@ -293,7 +293,7 @@ def create_vehicle():
         logger.error(f"Error in create_vehicle: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/production/api/vehicles/<int:vehicle_id>', methods=['GET'])
+@app.route('/api/vehicles/<int:vehicle_id>', methods=['GET'])
 def get_vehicle(vehicle_id):
     """Get a single vehicle by ID."""
     conn = None
@@ -338,7 +338,7 @@ def get_vehicle(vehicle_id):
         if conn:
             return_db_connection(conn)
 
-@app.route('/production/api/vehicles/<int:vehicle_id>', methods=['PUT'])
+@app.route('/api/vehicles/<int:vehicle_id>', methods=['PUT'])
 def update_vehicle(vehicle_id):
     """Update an existing vehicle."""
     try:
@@ -414,7 +414,7 @@ def update_vehicle(vehicle_id):
         logger.error(f"Error in update_vehicle: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/production/api/vehicles/<int:vehicle_id>', methods=['DELETE'])
+@app.route('/api/vehicles/<int:vehicle_id>', methods=['DELETE'])
 def delete_vehicle(vehicle_id):
     """Delete a vehicle."""
     conn = None
@@ -452,7 +452,7 @@ def delete_vehicle(vehicle_id):
         if conn:
             return_db_connection(conn)
 
-@app.route('/production/api/conversions', methods=['POST'])
+@app.route('/api/conversions', methods=['POST'])
 def save_conversion():
     """Save a conversion to the database."""
     try:
@@ -515,7 +515,7 @@ def save_conversion():
         logger.error(f"Error in save_conversion: {str(e)}")
         return jsonify({'success': False, 'error': str(e), 'use_localStorage': True}), 500
 
-@app.route('/production/api/conversions', methods=['GET'])
+@app.route('/api/conversions', methods=['GET'])
 def get_conversions():
     """Get conversion history from the database."""
     limit = request.args.get('limit', 50, type=int)
